@@ -2,72 +2,82 @@
 // For debugging
 #include <iostream>
 // For std::remove
-#include <algorithm> 
+#include <algorithm>
 #include <map>
 #include <set>
+#include <unordered_set>
+#include <string>
+#include <vector>
 #endif
 
 #include "wordle.h"
 #include "dict-eng.h"
 using namespace std;
 
-
 // Add prototypes of helper functions here
-void wordleHelper(std::string floating, const std::set<std::string>& dict, 
-    std::set<std::string>& results, std::string current, unsigned int idx);
-    
+void wordleHelper(
+    vector<int>& freq,
+    int floatsLeft,
+    const unordered_set<string>& dictSet,
+    set<string>& results,
+    string& current,
+    unsigned idx);
+
 // Definition of primary wordle function
-std::set<std::string> wordle(
-    const std::string& in,
-    const std::string& floating,
-    const std::set<std::string>& dict)
+set<string> wordle(
+    const string& in,
+    const string& floating,
+    const set<string>& dict)
 {
-    // Add your code here
     set<string> results;
     string current = in;
-    wordleHelper(floating, dict, results, current, 0);  
+    unordered_set<string> dictSet(dict.begin(), dict.end());
+    vector<int> freq(26, 0);
+    for (char c : floating)
+        freq[c - 'a']++;
+    wordleHelper(freq, floating.size(), dictSet, results, current, 0);
     return results;
 }
 
 // Define any helper functions here
 void wordleHelper(
-    std::string floating,
-    const std::set<std::string>& dict, 
-    std::set<std::string>& results,
-    std::string current,
-    unsigned int idx)
+    vector<int>& freq,
+    int floatsLeft,
+    const unordered_set<string>& dictSet,
+    set<string>& results,
+    string& current,
+    unsigned idx)
 {
-    int slotsLeft = current.length() - idx;
-    if ((int)floating.length() > slotsLeft) return;
+    unsigned n = current.size();
+    int slotsLeft = n - idx;
+    if (floatsLeft > slotsLeft)
+        return;
 
-
-    if (idx == current.length()){
-        if (dict.count(current) > 0 && floating.empty()){
+    if (idx == n) {
+        if (floatsLeft == 0 && dictSet.count(current))
             results.insert(current);
-        }
         return;
     }
 
-    if (current[idx] != '-'){
-        wordleHelper(floating, dict, results, current, idx + 1);
+    if (current[idx] != '-') {
+        wordleHelper(freq, floatsLeft, dictSet, results, current, idx + 1);
         return;
     } else {
-        for (unsigned int i = 0; i < floating.length(); ++i){
-            char c = floating[i];
+        for (int i = 0; i < 26; ++i) {
+            if (freq[i] == 0) continue;
+            char c = 'a' + i;
             current[idx] = c;
-            string newFloating = floating;
-            newFloating.erase(i, 1);
-            wordleHelper(newFloating, dict, results, current, idx + 1);
+            freq[i]--;
+            wordleHelper(freq, floatsLeft - 1, dictSet, results, current, idx + 1);
+            freq[i]++;
             current[idx] = '-';
         }
-
-        for (char c = 'a'; c <= 'z'; ++c){
-            if (floating.find(c) == string::npos){
-                current[idx] = c;
-                wordleHelper(floating, dict, results, current, idx + 1);
-                current[idx] = '-';
-            }
+        for (int i = 0; i < 26; ++i) {
+            if (freq[i] != 0) continue;
+            char c = 'a' + i;
+            current[idx] = c;
+            wordleHelper(freq, floatsLeft, dictSet, results, current, idx + 1);
+            current[idx] = '-';
         }
     }
 }
-
